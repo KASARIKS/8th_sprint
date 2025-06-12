@@ -14,9 +14,7 @@ func NewParcelStore(db *sql.DB) ParcelStore {
 
 func (s ParcelStore) Add(p Parcel) (int, error) {
 	// реализуйте добавление строки в таблицу parcel, используйте данные из переменной p
-	res, err := s.db.Exec("INSERT INTO parcel (number, client, status, address, created_at) VALUES "+
-		"(:number, :client, :status, :address, :created_at);",
-		sql.Named("number", p.Number),
+	res, err := s.db.Exec("INSERT INTO parcel (client, status, address, created_at) VALUES (:client, :status, :address, :created_at);",
 		sql.Named("client", p.Client),
 		sql.Named("status", p.Status),
 		sql.Named("address", p.Address),
@@ -87,9 +85,12 @@ func (s ParcelStore) SetStatus(number int, status string) error {
 func (s ParcelStore) SetAddress(number int, address string) error {
 	// реализуйте обновление адреса в таблице parcel
 	// менять адрес можно только если значение статуса registered
-	_, err := s.db.Exec("UPDATE parcel SET address = IF(status = 'registered', :address, address) WHERE number = :number;",
-		sql.Named("address", address),
-		sql.Named("number", number))
+	isReg, err := s.isNumberRegistered(number)
+	if err == nil && isReg {
+		_, err = s.db.Exec("UPDATE parcel SET address = :address WHERE number = :number;",
+			sql.Named("address", address),
+			sql.Named("number", number))
+	}
 
 	return err
 }
@@ -113,7 +114,7 @@ func (s ParcelStore) isNumberRegistered(number int) (bool, error) {
 		return false, err
 	}
 
-	if res == "registered" {
+	if res == ParcelStatusRegistered {
 		return true, nil
 	}
 
