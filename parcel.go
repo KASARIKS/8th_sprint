@@ -85,12 +85,10 @@ func (s ParcelStore) SetStatus(number int, status string) error {
 func (s ParcelStore) SetAddress(number int, address string) error {
 	// реализуйте обновление адреса в таблице parcel
 	// менять адрес можно только если значение статуса registered
-	isReg, err := s.isNumberRegistered(number)
-	if err == nil && isReg {
-		_, err = s.db.Exec("UPDATE parcel SET address = :address WHERE number = :number;",
-			sql.Named("address", address),
-			sql.Named("number", number))
-	}
+	_, err := s.db.Exec("UPDATE parcel SET address = :address WHERE number = :number AND status = :status;",
+		sql.Named("address", address),
+		sql.Named("number", number),
+		sql.Named("status", ParcelStatusRegistered))
 
 	return err
 }
@@ -98,25 +96,9 @@ func (s ParcelStore) SetAddress(number int, address string) error {
 func (s ParcelStore) Delete(number int) error {
 	// реализуйте удаление строки из таблицы parcel
 	// удалять строку можно только если значение статуса registered
-	isReg, err := s.isNumberRegistered(number)
-	if err == nil && isReg {
-		_, err = s.db.Exec("DELETE FROM parcel WHERE number = :number;", sql.Named("number", number))
-	}
+	_, err := s.db.Exec("DELETE FROM parcel WHERE number = :number AND status = :status;",
+		sql.Named("number", number),
+		sql.Named("status", ParcelStatusRegistered))
 
 	return err
-}
-
-func (s ParcelStore) isNumberRegistered(number int) (bool, error) {
-	row := s.db.QueryRow("SELECT status FROM parcel WHERE number = :number;", sql.Named("number", number))
-	var res string
-	err := row.Scan(&res)
-	if err != nil {
-		return false, err
-	}
-
-	if res == ParcelStatusRegistered {
-		return true, nil
-	}
-
-	return false, nil
 }
